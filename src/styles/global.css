@@ -88,6 +88,11 @@ a {
   color: var(--accent);
   mix-blend-mode: normal;
 }
+.topbar-links {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
 
 .rail {
   position: fixed;
