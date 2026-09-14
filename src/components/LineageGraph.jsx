@@ -5,7 +5,30 @@ import * as THREE from 'three'
 import { COL_X, GRAPH_NODES, GRAPH_EDGES } from '../data/content'
 import { useReducedMotion } from '../hooks/useReducedMotion'
 
-const EDGE_COLOR = '#333c2d'
+// The spheres keep their colors in both themes; only the lighting, the
+// connecting lines and the emissive glow shift so they stay readable.
+const THEMES = {
+  dark: {
+    edge: '#333c2d',
+    edgeOpacity: 0.5,
+    hemiSky: '#6b7568',
+    hemiGround: '#0a0b08',
+    hemiIntensity: 0.8,
+    dirIntensity: 0.4,
+    emissiveHub: 0.32,
+    emissiveSystem: 0.16,
+  },
+  light: {
+    edge: '#8d9782',
+    edgeOpacity: 0.75,
+    hemiSky: '#ffffff',
+    hemiGround: '#c2cbbc',
+    hemiIntensity: 1.15,
+    dirIntensity: 0.85,
+    emissiveHub: 0.1,
+    emissiveSystem: 0.04,
+  },
+}
 
 const nodeById = Object.fromEntries(GRAPH_NODES.map((n) => [n.id, n]))
 
@@ -29,7 +52,7 @@ function StudioEnvironment() {
   )
 }
 
-function Node({ node }) {
+function Node({ node, palette }) {
   const isHub = node.kind === 'hub'
   return (
     <mesh position={nodePosition(node)} scale={node.size}>
@@ -37,7 +60,7 @@ function Node({ node }) {
       <meshPhysicalMaterial
         color={node.color}
         emissive={node.color}
-        emissiveIntensity={isHub ? 0.32 : 0.16}
+        emissiveIntensity={isHub ? palette.emissiveHub : palette.emissiveSystem}
         metalness={isHub ? 0.3 : 0.15}
         roughness={isHub ? 0.24 : 0.3}
         clearcoat={1}
@@ -75,7 +98,7 @@ function EdgeParticles({ curve, color, reducedMotion }) {
   )
 }
 
-function Edge({ from, to, reducedMotion }) {
+function Edge({ from, to, reducedMotion, palette }) {
   const start = useMemo(() => new THREE.Vector3(...nodePosition(nodeById[from])), [from])
   const end = useMemo(() => new THREE.Vector3(...nodePosition(nodeById[to])), [to])
   const mid = useMemo(
@@ -89,15 +112,24 @@ function Edge({ from, to, reducedMotion }) {
 
   return (
     <>
-      <QuadraticBezierLine start={start} end={end} mid={mid} color={EDGE_COLOR} transparent opacity={0.5} lineWidth={1} />
+      <QuadraticBezierLine
+        start={start}
+        end={end}
+        mid={mid}
+        color={palette.edge}
+        transparent
+        opacity={palette.edgeOpacity}
+        lineWidth={1}
+      />
       <EdgeParticles curve={curve} color={particleColor} reducedMotion={reducedMotion} />
     </>
   )
 }
 
-export default function LineageGraph() {
+export default function LineageGraph({ theme = 'dark' }) {
   const controlsRef = useRef(null)
   const reducedMotion = useReducedMotion()
+  const palette = THEMES[theme] ?? THEMES.dark
 
   const handleStart = () => {
     if (controlsRef.current) controlsRef.current.autoRotate = false
@@ -112,15 +144,15 @@ export default function LineageGraph() {
 
   return (
     <>
-      <hemisphereLight args={['#6b7568', '#0a0b08', 0.8]} />
-      <directionalLight position={[6, 10, 8]} intensity={0.4} />
+      <hemisphereLight args={[palette.hemiSky, palette.hemiGround, palette.hemiIntensity]} />
+      <directionalLight position={[6, 10, 8]} intensity={palette.dirIntensity} />
       <StudioEnvironment />
 
       {GRAPH_NODES.map((node) => (
-        <Node key={node.id} node={node} />
+        <Node key={node.id} node={node} palette={palette} />
       ))}
       {GRAPH_EDGES.map(([from, to]) => (
-        <Edge key={`${from}-${to}`} from={from} to={to} reducedMotion={reducedMotion} />
+        <Edge key={`${from}-${to}`} from={from} to={to} reducedMotion={reducedMotion} palette={palette} />
       ))}
 
       <OrbitControls

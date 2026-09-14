@@ -25,23 +25,53 @@ export const GRAPH_EDGES = [
   ['skills', 'connect'],
 ]
 
-export const EXPERIENCE = [
+// Chronological résumé timeline — education, certifications, projects and
+// roles as one arc, rendered as the scroll-tracked timeline section.
+export const TIMELINE = [
   {
-    index: '01',
-    company: 'Perficient — Client: BNY Mellon',
-    role: 'Associate Technical Consultant, Data Lineage',
-    dates: 'Jun 2025 — Present',
-    detail:
-      'Auditing Data Lineage and RFIs across 50+ banking applications per quarter, tracing Primary Data Elements for global regulatory compliance, and stitching IBM Manta metadata into Solidatus models.',
+    step: '01',
+    year: '2021 — 2025',
+    title: 'VIT, Vellore',
+    body: 'B.Tech in Computer Science, GPA 8.78/10. Four years that turned into a specialisation in data: how it moves, how it breaks, and how you prove where it came from.',
   },
   {
-    index: '02',
-    company: 'Geojit Technologies',
-    role: 'Flutter Intern, Data Visualization & Product',
-    dates: 'Jun — Jul 2024',
-    detail:
-      "Mapped custom charting libraries for a wealth-management app's portfolio tracking and translated layout data into production onboarding dashboards.",
+    step: '02',
+    year: '2023',
+    title: 'Decentralized Health Record Audit',
+    body: 'Architected a tamper-proof health-record ledger on Ethereum in Solidity, with rule-based access control letting users grant or revoke metadata permissions in real time.',
   },
+  {
+    step: '03',
+    year: '2024',
+    title: 'AWS Certified',
+    body: 'Cloud Practitioner in January, Solutions Architect – Associate in February. Both still current through February 2027.',
+  },
+  {
+    step: '04',
+    year: '2024',
+    title: 'Geojit Technologies',
+    body: 'Flutter intern on data visualization and product. Mapped custom charting libraries for portfolio tracking in a wealth-management app and shipped onboarding analytics dashboards.',
+  },
+  {
+    step: '05',
+    year: '2025',
+    title: 'Air Quality Forecasting — Patent Filed',
+    body: 'A Dual-Pathway Transformer Encoder forecasting eight pollutant vectors at once. RobustScaler and Huber Loss preprocessing cut predictive divergence by 300k+ units, validated with Dynamic Time Warping.',
+  },
+  {
+    step: '06',
+    year: '2025 — Present',
+    title: 'Perficient — Client: BNY Mellon',
+    body: 'Associate Technical Consultant on Data Lineage. Auditing 50+ banking applications per quarter, tracing Primary Data Elements for global regulatory compliance and stitching IBM Manta metadata into Solidatus models.',
+  },
+]
+
+export const AT_A_GLANCE = [
+  'B.Tech Computer Science, VIT — GPA 8.78/10',
+  'AWS Certified Solutions Architect – Associate',
+  'Patent filed on transformer-based forecasting',
+  '50+ banking applications audited per quarter',
+  'Based in Chennai, India',
 ]
 
 export const PROJECTS = [
@@ -103,7 +133,7 @@ export const CONTACT = {
 
 export const SECTIONS = [
   { key: 'source', label: 'Source' },
-  { key: 'experience', label: 'Experience' },
+  { key: 'timeline', label: 'Timeline' },
   { key: 'projects', label: 'Projects' },
   { key: 'skills', label: 'Skills' },
   { key: 'connect', label: 'Connect' },

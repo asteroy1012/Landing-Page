@@ -1,4 +1,6 @@
-export default function Topbar() {
+import ThemeToggle from './ThemeToggle'
+
+export default function Topbar({ theme, onToggleTheme }) {
   return (
     <header className="topbar">
       <span>ADITYA RAJ</span>
@@ -7,6 +9,7 @@ export default function Topbar() {
           Resume ↗
         </a>
         <a href="#connect">Contact ↓</a>
+        <ThemeToggle theme={theme} onToggle={onToggleTheme} />
       </div>
     </header>
   )

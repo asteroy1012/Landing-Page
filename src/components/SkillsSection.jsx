@@ -1,11 +1,12 @@
 import { SKILL_GROUPS } from '../data/content'
+import TypeTitle from './TypeTitle'
 
 export default function SkillsSection({ registerRef }) {
   return (
     <section className="section" id="skills" data-key="skills" ref={registerRef}>
       <div className="section-inner">
         <span className="eyebrow">[ 03 / Skills ]</span>
-        <h2 className="section-title">The toolkit behind the trace.</h2>
+        <TypeTitle className="section-title" lines={['The toolkit behind the trace.']} />
         <div className="skill-groups">
           {SKILL_GROUPS.map((group) => (
             <div className="skill-group" key={group.title}>

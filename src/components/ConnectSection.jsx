@@ -1,15 +1,12 @@
 import { CONTACT } from '../data/content'
+import TypeTitle from './TypeTitle'
 
 export default function ConnectSection({ registerRef }) {
   return (
     <section className="section" id="connect" data-key="connect" ref={registerRef}>
       <div className="section-inner connect-inner">
         <span className="eyebrow">[ 04 / Connect ]</span>
-        <h2 className="cta-title">
-          Let's trace a path
-          <br />
-          together.
-        </h2>
+        <TypeTitle className="cta-title" lines={["Let's trace a path", 'together.']} />
         <a className="cta-btn" href={`mailto:${CONTACT.email}`}>
           Send an email <span className="cta-arrow">→</span>
         </a>
