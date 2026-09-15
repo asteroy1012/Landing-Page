@@ -1,11 +1,11 @@
 import { useEffect, useRef } from 'react'
+import lottie from 'lottie-web/build/player/lottie_light'
+// "Hello (apple)" by Noé M on LottieFiles, used under the Lottie Simple License.
+import helloAnimation from '../assets/hello-lottie.json'
 import { useReducedMotion } from '../hooks/useReducedMotion'
 
-const WORD = 'hello'
-// Borel is a single-weight script; the fallback keeps the canvas legible
-// for the moment before the web font finishes loading.
-const FONT_FAMILY = "Borel, 'Brush Script MT', cursive"
-const FONT_WEIGHT = 400
+// Cosmic orange (#F47A2A) as Lottie's 0–1 RGB.
+const COSMIC_ORANGE = [0.957, 0.478, 0.165]
 
 // Scroll distance (in viewport heights) the stage stays pinned; the section
 // is 250lvh tall, so 150lvh of it is pinned travel.
@@ -14,27 +14,47 @@ const PIN_VIEWPORTS = 1.5
 const NAME_EXIT = 0.45
 
 // The word stays centred; scrolling only grows it and lifts it slightly.
-// x/y are % of the stage, scale is a multiplier.
+// y is % of the stage height, scale is a multiplier.
 const MOTION = {
   from: { y: 0, scale: 1 },
   mid: { y: -9, scale: 1.22 },
   to: { y: -16, scale: 1.42 },
 }
 
-// Handwriting reveal: starts as the intro window opens, writes each letter
-// at a pace proportional to its width, with a short lift between letters.
+// The source animation writes the word (frames 0–373) and then erases it;
+// only the writing part is played, so the word stays on screen afterwards.
+const WRITE_END_FRAME = 373
 const WRITE_DELAY_MS = 1900
-const WRITE_DURATION_MS = 1100
-const LETTER_PAUSE_MS = 35
-const FEATHER = 0.06
+const WRITE_SPEED = 1.8
 
-const PALETTES = {
-  dark: { bg: '11, 13, 10', ink: '#f47a2a' },
-  light: { bg: '233, 236, 231', ink: '#f47a2a' },
+// The handwriting sits a touch below the centre of its square comp.
+const INK_OFFSET = 'translate(-49.74%, -51%)'
+
+// Rewrites every stroke/fill colour in the animation to one RGB value,
+// keeping gradient stop offsets intact.
+function recolor(animation, rgb) {
+  const data = structuredClone(animation)
+  const walk = (items) => {
+    for (const item of items) {
+      if (item.ty === 'gr') walk(item.it)
+      if (item.ty === 'gs' || item.ty === 'gf') {
+        const { p, k } = item.g
+        for (let i = 0; i < p; i++) {
+          k.k[i * 4 + 1] = rgb[0]
+          k.k[i * 4 + 2] = rgb[1]
+          k.k[i * 4 + 3] = rgb[2]
+        }
+      }
+      if ((item.ty === 'st' || item.ty === 'fl') && item.c?.a === 0) item.c.k = [...rgb, 1]
+    }
+  }
+  data.layers.forEach((layer) => layer.shapes && walk(layer.shapes))
+  return data
 }
 
+const HELLO = recolor(helloAnimation, COSMIC_ORANGE)
+
 const lerp = (a, b, t) => a + (b - a) * t
-const easeInOutSine = (t) => -(Math.cos(Math.PI * t) - 1) / 2
 
 function sampleMotion(progress) {
   const { from, mid, to } = MOTION
@@ -53,166 +73,71 @@ function Chars({ text, offset }) {
   ))
 }
 
-export default function Hero({ heroRef, theme }) {
-  const canvasRef = useRef(null)
+export default function Hero({ heroRef }) {
+  const helloRef = useRef(null)
   const topLineRef = useRef(null)
   const bottomLineRef = useRef(null)
   const metaRef = useRef(null)
-  // Kept outside the effect so a theme switch or resize doesn't replay the writing.
-  const writeStartRef = useRef(null)
   const reducedMotion = useReducedMotion()
 
+  // Write the word once as the intro opens, then hold the final frame.
+  useEffect(() => {
+    const container = helloRef.current
+    if (!container) return
+    const anim = lottie.loadAnimation({
+      container,
+      renderer: 'svg',
+      loop: false,
+      autoplay: false,
+      animationData: HELLO,
+      rendererSettings: { preserveAspectRatio: 'xMidYMid meet' },
+    })
+    let timer = 0
+    const start = () => {
+      if (reducedMotion) {
+        anim.goToAndStop(WRITE_END_FRAME, true)
+        return
+      }
+      anim.setSpeed(WRITE_SPEED)
+      timer = window.setTimeout(() => anim.playSegments([0, WRITE_END_FRAME], true), WRITE_DELAY_MS)
+    }
+    anim.addEventListener('DOMLoaded', start)
+    return () => {
+      window.clearTimeout(timer)
+      anim.destroy()
+    }
+  }, [reducedMotion])
+
+  // Scroll: grow and lift the word, slide the name apart.
   useEffect(() => {
     const section = heroRef.current
-    const canvas = canvasRef.current
-    if (!section || !canvas) return
-    const ctx = canvas.getContext('2d', { alpha: false })
-    const palette = PALETTES[theme] ?? PALETTES.dark
-    if (writeStartRef.current === null) writeStartRef.current = performance.now() + WRITE_DELAY_MS
-
-    // Word geometry in font pixels, relative to the word's centre.
-    const word = { font: 0, drawX: 0, baseline: 0, inkLeft: 0, inkRight: 0, height: 0, letters: [] }
-    const size = { w: 0, h: 0, dpr: 1 }
+    if (!section) return
     let lastProgress = -1
-    let lastReveal = -1
+    let lastVh = -1
     let raf = 0
 
-    const setFont = (px) => {
-      ctx.font = `${FONT_WEIGHT} ${px}px ${FONT_FAMILY}`
-      if ('letterSpacing' in ctx) ctx.letterSpacing = '0px'
-    }
-
-    const measure = () => {
-      size.w = canvas.clientWidth
-      size.h = canvas.clientHeight
-      size.dpr = Math.min(window.devicePixelRatio || 1, 2)
-      canvas.width = Math.round(size.w * size.dpr)
-      canvas.height = Math.round(size.h * size.dpr)
-
-      setFont(100)
-      const ref = ctx.measureText(WORD)
-      const refInkWidth = ref.actualBoundingBoxLeft + ref.actualBoundingBoxRight || ref.width || 1
-      const refInkHeight = ref.actualBoundingBoxAscent + ref.actualBoundingBoxDescent || 100
-      // Fits comfortably inside the stage, wider share on narrow screens.
-      const widthShare = size.w > size.h ? 0.72 : 0.9
-      word.font = Math.min((100 * size.w * widthShare) / refInkWidth, (100 * size.h * 0.55) / refInkHeight)
-
-      setFont(word.font)
-      const m = ctx.measureText(WORD)
-      const inkWidth = m.actualBoundingBoxLeft + m.actualBoundingBoxRight
-      // Place the left-aligned text so its ink, not its advance box, is centred.
-      word.drawX = (m.actualBoundingBoxLeft - m.actualBoundingBoxRight) / 2
-      // Borel's line box is far taller than its letters; centre on the glyphs.
-      word.baseline = (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2
-      word.inkLeft = word.drawX - m.actualBoundingBoxLeft
-      word.inkRight = word.inkLeft + inkWidth
-      word.height = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent
-
-      // Letter boundaries from prefix advances, clamped to the ink extents.
-      const bounds = [word.inkLeft]
-      for (let i = 1; i < WORD.length; i++) {
-        const x = word.drawX + ctx.measureText(WORD.slice(0, i)).width
-        bounds.push(Math.min(Math.max(x, word.inkLeft), word.inkRight))
-      }
-      bounds.push(word.inkRight)
-      word.letters = WORD.split('').map((_, i) => ({ x0: bounds[i], x1: bounds[i + 1] }))
-
-      lastProgress = -1
-      lastReveal = -1
-    }
-
-    // How far (in font px from the ink's left edge) the pen has written.
-    const revealAt = (now) => {
-      const inkWidth = word.inkRight - word.inkLeft
-      if (reducedMotion) return inkWidth
-      const writingTime = WRITE_DURATION_MS
-      let elapsed = now - writeStartRef.current
-      if (elapsed <= 0) return 0
-      for (const letter of word.letters) {
-        const span = letter.x1 - letter.x0
-        const duration = (span / inkWidth) * writingTime
-        if (elapsed < duration) return letter.x0 - word.inkLeft + span * easeInOutSine(elapsed / duration)
-        elapsed -= duration + LETTER_PAUSE_MS
-        if (elapsed < 0) return letter.x1 - word.inkLeft
-      }
-      return inkWidth
-    }
-
-    const draw = (progress, revealed) => {
-      const { w, h, dpr } = size
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-      ctx.fillStyle = `rgb(${palette.bg})`
-      ctx.fillRect(0, 0, w, h)
-
-      if (revealed > 0) {
-        const { y, scale } = sampleMotion(progress)
-        const inkWidth = word.inkRight - word.inkLeft
-        const edgeX = word.inkLeft + revealed
-        const feather = inkWidth * FEATHER
-        const top = -word.height
-        const band = word.height * 2
-
-        ctx.save()
-        ctx.translate(w / 2, h / 2 + (y / 100) * h)
-        ctx.scale(scale, scale)
-        ctx.beginPath()
-        ctx.rect(word.inkLeft - feather, top, revealed + feather, band)
-        ctx.clip()
-        setFont(word.font)
-        ctx.textAlign = 'left'
-        ctx.textBaseline = 'alphabetic'
-        ctx.fillStyle = palette.ink
-        ctx.fillText(WORD, word.drawX, word.baseline)
-        // The page behind the word is a flat colour, so fading that colour
-        // back over the leading edge reads as ink still flowing in.
-        if (revealed < inkWidth) {
-          const g = ctx.createLinearGradient(edgeX - feather, 0, edgeX, 0)
-          g.addColorStop(0, `rgba(${palette.bg}, 0)`)
-          g.addColorStop(1, `rgba(${palette.bg}, 1)`)
-          ctx.fillStyle = g
-          ctx.fillRect(edgeX - feather, top, feather, band)
-        }
-        ctx.restore()
-      }
-
-      const veil = 0.3 * (1 - Math.min(Math.max(progress, 0), PIN_VIEWPORTS) / PIN_VIEWPORTS)
-      if (veil > 0) {
-        ctx.fillStyle = `rgba(${palette.bg}, ${veil})`
-        ctx.fillRect(0, 0, w, h)
-      }
-    }
-
-    const tick = (now) => {
+    const tick = () => {
       const vh = window.innerHeight
       const scrolled = Math.min(Math.max(-section.getBoundingClientRect().top, 0), PIN_VIEWPORTS * vh)
       const progress = reducedMotion ? 0 : scrolled / vh
-      const revealed = revealAt(now)
-      if (progress !== lastProgress || revealed !== lastReveal) {
-        draw(progress, revealed)
-        if (progress !== lastProgress) {
-          const exit = Math.min(progress / NAME_EXIT, 1)
-          if (topLineRef.current) topLineRef.current.style.transform = `translate3d(${-110 * exit}%, 0, 0)`
-          if (bottomLineRef.current) bottomLineRef.current.style.transform = `translate3d(${110 * exit}%, 0, 0)`
-          if (metaRef.current) metaRef.current.style.opacity = String(1 - exit)
+      if (progress !== lastProgress || vh !== lastVh) {
+        const { y, scale } = sampleMotion(progress)
+        if (helloRef.current) {
+          helloRef.current.style.transform = `${INK_OFFSET} translate3d(0, ${(y / 100) * vh}px, 0) scale(${scale})`
         }
+        const exit = Math.min(progress / NAME_EXIT, 1)
+        if (topLineRef.current) topLineRef.current.style.transform = `translate3d(${-110 * exit}%, 0, 0)`
+        if (bottomLineRef.current) bottomLineRef.current.style.transform = `translate3d(${110 * exit}%, 0, 0)`
+        if (metaRef.current) metaRef.current.style.opacity = String(1 - exit)
         lastProgress = progress
-        lastReveal = revealed
+        lastVh = vh
       }
       raf = requestAnimationFrame(tick)
     }
 
-    measure()
-    const ro = new ResizeObserver(measure)
-    ro.observe(canvas)
-    // Canvas text falls back silently if Borel isn't loaded yet, so re-measure once it is.
-    document.fonts?.load(`${FONT_WEIGHT} 100px Borel`).then(measure).catch(() => {})
     raf = requestAnimationFrame(tick)
-
-    return () => {
-      cancelAnimationFrame(raf)
-      ro.disconnect()
-    }
-  }, [heroRef, theme, reducedMotion])
+    return () => cancelAnimationFrame(raf)
+  }, [heroRef, reducedMotion])
 
   return (
     <section className="name-hero" id="heroSection" ref={heroRef}>
@@ -220,7 +145,7 @@ export default function Hero({ heroRef, theme }) {
       <div className="name-hero__stage">
         <div className="name-hero__scene" aria-hidden="true">
           <div className="name-hero__scene-inner">
-            <canvas ref={canvasRef} className="name-hero__canvas" />
+            <div className="name-hero__hello" ref={helloRef} />
           </div>
         </div>
         <div className="name-hero__content">

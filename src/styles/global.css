@@ -236,12 +236,24 @@ a {
   inset: 0;
   animation: heroScale 3s both;
 }
-.name-hero__canvas {
+/* The Lottie comp is square, but the handwriting only fills a band across
+   its middle (~62% of its width), so the box is sized larger than the word. */
+.name-hero__hello {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  left: 50%;
+  top: 50%;
+  width: 116vw;
+  aspect-ratio: 1;
+  transform: translate(-49.74%, -51%);
+  will-change: transform;
+}
+.name-hero__hello svg {
   display: block;
+}
+@media (orientation: portrait) {
+  .name-hero__hello {
+    width: 145vw;
+  }
 }
 @keyframes heroClip {
   0% {

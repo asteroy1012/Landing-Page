@@ -26,7 +26,7 @@ export default function App() {
       <Topbar theme={theme} onToggleTheme={toggle} showWordmark={railVisible} />
       <Rail activeKey={activeKey} visible={railVisible} />
       <main>
-        <Hero heroRef={heroRef} theme={theme} />
+        <Hero heroRef={heroRef} />
         <SourceSection registerRef={registerSection('source')} />
         <TimelineSection registerRef={registerSection('timeline')} theme={theme} />
         <ProjectsSection registerRef={registerSection('projects')} />
