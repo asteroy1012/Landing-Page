@@ -23,7 +23,7 @@ export default function App() {
     <>
       <Grain />
       <Cursor />
-      <Topbar theme={theme} onToggleTheme={toggle} />
+      <Topbar theme={theme} onToggleTheme={toggle} showWordmark={railVisible} />
       <Rail activeKey={activeKey} visible={railVisible} />
       <main>
         <Hero heroRef={heroRef} theme={theme} />

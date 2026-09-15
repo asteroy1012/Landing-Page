@@ -2,29 +2,6 @@
 // Keeping this separate from components makes it easy to update copy
 // without touching layout/animation code.
 
-export const COL_X = [-7, -1.5, 5, 10.5]
-
-// Hub nodes (source / skills / connect) carry the brand amber — they're
-// the spine of the story. Each system node gets its own curated, saturated
-// hue tied loosely to its category, so the graph reads as colorful but
-// still deliberate rather than random.
-export const GRAPH_NODES = [
-  { id: 'source', kind: 'hub', color: '#e2984a', col: 0, y: 0, z: 0, size: 0.8 },
-  { id: 'n1', kind: 'system', color: '#5b8def', col: 1, y: 4, z: -1.2, size: 0.5 }, // Perficient / BNY Mellon — banking
-  { id: 'n2', kind: 'system', color: '#3fc7b0', col: 1, y: 2, z: 0.9, size: 0.46 }, // Geojit — fintech visualization
-  { id: 'n3', kind: 'system', color: '#a56ee8', col: 1, y: 0, z: -0.6, size: 0.5 }, // Air Quality Forecasting — ML research
-  { id: 'n4', kind: 'system', color: '#4fbf83', col: 1, y: -2, z: 1.1, size: 0.46 }, // Health Record Audit — blockchain
-  { id: 'n5', kind: 'system', color: '#e8607a', col: 1, y: -4, z: -0.3, size: 0.42 }, // AWS Certifications
-  { id: 'skills', kind: 'hub', color: '#e2984a', col: 2, y: 0, z: 0, size: 0.62 },
-  { id: 'connect', kind: 'hub', color: '#e2984a', col: 3, y: 0, z: 0, size: 0.55 },
-]
-
-export const GRAPH_EDGES = [
-  ['source', 'n1'], ['source', 'n2'], ['source', 'n3'], ['source', 'n4'], ['source', 'n5'],
-  ['n1', 'skills'], ['n2', 'skills'], ['n3', 'skills'], ['n4', 'skills'], ['n5', 'skills'],
-  ['skills', 'connect'],
-]
-
 // Chronological résumé timeline — education, certifications, projects and
 // roles as one arc, rendered as the scroll-tracked timeline section.
 export const TIMELINE = [
